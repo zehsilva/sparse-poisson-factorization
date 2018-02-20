@@ -56,8 +56,8 @@ To use sparse poisson tensor factorization add the following import:
     poisson.fit(X)`
 
 
- This implementation is modification of the code found in [https://github.com/dawenl/stochastic_PMF/blob/master/code/pmf.py] by Dawen Liang <dliang@ee.columbia.edu>
+ This implementation is modification of the code found in [PMF](https://github.com/dawenl/stochastic_PMF/blob/master/code/pmf.py) by Dawen Liang <dliang@ee.columbia.edu>
 
-To understand the models implemented look at the Following bibliography
-    - [https://arxiv.org/abs/1311.1704](Scalable Recommendation with Poisson Factorization)
-    - [https://arxiv.org/abs/1506.03493](Bayesian Poisson Tensor Factorization for Inferring Multilateral Relations from Sparse Dyadic Event Counts)
+To understand the models implemented look at the Following bibliography:
+- [Scalable Recommendation with Poisson Factorization](https://arxiv.org/abs/1311.1704)
+- [Bayesian Poisson Tensor Factorization for Inferring Multilateral Relations from Sparse Dyadic Event Counts](https://arxiv.org/abs/1506.03493)
