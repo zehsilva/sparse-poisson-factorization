@@ -1,6 +1,10 @@
-# sparse-poisson-factorization
-Poisson Matrix and Tensor Factorization with sparse input and internal representations.
+# sparse-poisson-factorization 
+Non-negative probabilistic Poisson-gamma matrix factorization and tensor CP decomposition with sparse input and internal components. 
+This is a (more) memory efficient version of Poisson Factorization in pure python that takes advantage of the fact that inference updates for Poisson Factorization needs to be performed only on the non-zero entries of the input matrix/tensor.
+Both models consist on a hierarchical probabilistic model with a Poisson likelihood for the matrix entries, and Gamma distributed latent factors vectors for rows and columns (in the matrix case) or each mode (in the tensor case, effectively meaning that we are performing a non-negative CP decomposition).    
 
+For the matrix case the expected value of latent factor can be accessed via the attributes `Eb` and `Et` of the poisson factorization object, while for the tensor CP decomposition the expected value of latent factors can be acessed via the attribute `Eb` indexed by the mode. 
+ 
 ## Dependencies:
 - numpy_indexed
 - scipy
