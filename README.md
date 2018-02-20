@@ -50,3 +50,6 @@ To use sparse poisson tensor factorization add the following import:
 
     poisson = st.PoissonTF(n_components=15,max_iter=1000,smoothness=0.1,verbose=True,tol=0.0001,a=0.1,b=0.1)
     poisson.fit(X)`
+
+
+ This implementation is modification of the code found in [https://github.com/dawenl/stochastic_PMF/blob/master/code/pmf.py] by Dawen Liang <dliang@ee.columbia.edu>
