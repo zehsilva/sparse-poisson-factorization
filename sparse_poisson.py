@@ -44,7 +44,7 @@ class PoissonMF(BaseEstimator, TransformerMixin):
             Whether to show progress during model fitting
 
         **kwargs: dict
-            Model hyperparameters
+            Model hyperparameters: theta_a, theta_b, beta_a, beta_b
         """
         self.allone=allone
         self.n_components = n_components
@@ -62,8 +62,10 @@ class PoissonMF(BaseEstimator, TransformerMixin):
         self._parse_args(**kwargs)
 
     def _parse_args(self, **kwargs):
-        self.a = float(kwargs.get('a', 0.1))
-        self.b = float(kwargs.get('b', 0.1))
+        self.a1 = float(kwargs.get('theta_a', 0.1))
+        self.a2 = float(kwargs.get('theta_b', 0.1))
+        self.b1 = float(kwargs.get('beta_a', 0.1))
+        self.b2 = float(kwargs.get('beta_b', 0.1))
 
     def _init_components(self, n_rows):
         # variational parameters for beta
@@ -187,8 +189,8 @@ class PoissonMF(BaseEstimator, TransformerMixin):
     def _update_theta(self, X):
         #print "t_gamma 0", self.gamma_t.shape
         #print "t_rho 0", self.rho_t.shape
-        self.gamma_t = self.a + npi.group_by(self.cols_index).sum(self.phi_var)[1]
-        self.rho_t = self.a  + np.sum(self.Eb, axis=0, keepdims=True)
+        self.gamma_t = self.a1 + npi.group_by(self.cols_index).sum(self.phi_var)[1]
+        self.rho_t = self.a2  + np.sum(self.Eb, axis=0, keepdims=True)
         #print "t_gamma 1", self.gamma_t.shape
         #print "t_rho 1", self.rho_t.shape
         self.Et, self.Elogt = _compute_expectations(self.gamma_t, self.rho_t)
@@ -197,8 +199,8 @@ class PoissonMF(BaseEstimator, TransformerMixin):
     def _update_beta(self, X):
         #print "b_gamma 0", self.gamma_b.shape
         #print "b_rho 0", self.rho_b.shape
-        self.gamma_b = self.b + npi.group_by(self.row_index).sum(self.phi_var)[1]
-        self.rho_b = self.b + np.sum(self.Et, axis=0, keepdims=True)
+        self.gamma_b = self.b1 + npi.group_by(self.row_index).sum(self.phi_var)[1]
+        self.rho_b = self.b2 + np.sum(self.Et, axis=0, keepdims=True)
         #print "b_gamma 1", self.gamma_b.shape
         #print "b_rho 1", self.rho_b.shape
         self.Eb, self.Elogb = _compute_expectations(self.gamma_b, self.rho_b)
@@ -207,10 +209,10 @@ class PoissonMF(BaseEstimator, TransformerMixin):
         bound = np.sum(self.phi_var*(self.Elogt[self.cols_index, :]+self.Elogb[self.row_index, :]))
         bound -= np.sum(self.phi_var*(np.log(self.phi_var)-np.log(X[:,2]).reshape(X.shape[0],1)))
         bound -= np.sum(np.inner(self.Eb,self.Et))
-        bound += _gamma_term(self.a, self.a ,
+        bound += _gamma_term(self.a1, self.a2 ,
                              self.gamma_t, self.rho_t,
                              self.Et, self.Elogt)
-        bound += _gamma_term(self.b, self.b, self.gamma_b, self.rho_b,
+        bound += _gamma_term(self.b1, self.b2, self.gamma_b, self.rho_b,
                              self.Eb, self.Elogb)
         return bound
 
