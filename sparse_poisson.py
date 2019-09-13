@@ -1,16 +1,13 @@
 """
-
 Poisson Matrix Factorization using sparse representation of input matrix by: 2017-11-24 Eliezer de Souza da Silva <eliezer.souza.silva@ntnu.no>
 Modification of a code created by: 2014-03-25 02:06:52 by Dawen Liang <dliang@ee.columbia.edu>
-
-
-
 """
 
 import sys
 import numpy as np
 from scipy import special
 import numpy_indexed as npi
+import matplotlib.pyplot as plt
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -21,28 +18,21 @@ class PoissonMF(BaseEstimator, TransformerMixin):
                  smoothness=100, random_state=None, verbose=False,allone=False,
                  **kwargs):
         """ Poisson matrix factorization
-
         Arguments
         ---------
         n_components : int
             Number of latent components
-
         max_iter : int
             Maximal number of iterations to perform
-
         tol : float
             The threshold on the increase of the objective to stop the
             iteration
-
         smoothness : int
             Smoothness on the initialization variational parameters
-
         random_state : int or RandomState
             Pseudo random number generator used for sampling
-
         verbose : bool
             Whether to show progress during model fitting
-
         **kwargs: dict
             Model hyperparameters: theta_a, theta_b, beta_a, beta_b
         """
@@ -53,12 +43,10 @@ class PoissonMF(BaseEstimator, TransformerMixin):
         self.smoothness = smoothness
         self.random_state = random_state
         self.verbose = verbose
-
         if type(self.random_state) is int:
             np.random.seed(self.random_state)
         elif self.random_state is not None:
             np.random.setstate(self.random_state)
-
         self._parse_args(**kwargs)
 
     def _parse_args(self, **kwargs):
@@ -67,7 +55,7 @@ class PoissonMF(BaseEstimator, TransformerMixin):
         self.b1 = float(kwargs.get('beta_a', 0.1))
         self.b2 = float(kwargs.get('beta_b', 0.1))
 
-    def _init_components(self, n_rows):
+    def _init_components(self, n_rows,n_cols):
         # variational parameters for beta
         self.gamma_b = self.smoothness \
             * np.random.gamma(self.smoothness, 1. / self.smoothness,
@@ -76,29 +64,6 @@ class PoissonMF(BaseEstimator, TransformerMixin):
             * np.random.gamma(self.smoothness, 1. / self.smoothness,
                               size=(n_rows, self.n_components))
         self.Eb, self.Elogb = _compute_expectations(self.gamma_b, self.rho_b)
-
-    def set_components(self, shape, rate):
-        '''Set the latent components from variational parameters.
-
-        Parameters
-        ----------
-        shape : numpy-array, shape (n_components, n_feats)
-            Shape parameters for the variational distribution
-
-        rate : numpy-array, shape (n_components, n_feats)
-            Rate parameters for the variational distribution
-
-        Returns
-        -------
-        self : object
-            Return the instance itself.
-        '''
-
-        self.gamma_b, self.rho_b = shape, rate
-        self.Eb, self.Elogb = _compute_expectations(self.gamma_b, self.rho_b)
-        return self
-
-    def _init_weights(self, n_cols):
         # variational parameters for theta
         self.gamma_t = self.smoothness \
             * np.random.gamma(self.smoothness, 1. / self.smoothness,
@@ -107,17 +72,13 @@ class PoissonMF(BaseEstimator, TransformerMixin):
             * np.random.gamma(self.smoothness, 1. / self.smoothness,
                               size=(n_cols, self.n_components))
         self.Et, self.Elogt = _compute_expectations(self.gamma_t, self.rho_t)
-        self.c = 1. / np.mean(self.Et)
-
+        
     def fit(self, X):
         '''Fit the model to the data in X.
-
         Parameters
         ----------
         X : array-like, shape (n_examples, 3)
-
             Training data.
-
         Returns
         -------
         self: object
@@ -137,19 +98,16 @@ class PoissonMF(BaseEstimator, TransformerMixin):
         self.n_rows = np.max(X_new[:,0])+1
         self.n_cols = np.max(X_new[:,1])+1
         if self.verbose:
-            print "cols=",self.n_cols
-            print "rows=",self.n_rows
+            print("cols=",self.n_cols)
+            print("rows=",self.n_rows)
         self.row_index = X_new[:,0]
         self.cols_index = X_new[:,1]
         self.vals_vec = X_new[:,2]
-        self._init_components(self.n_rows) #beta
-        self._init_weights(self.n_cols) #theta
-        self._update(X_new)
-        return self
+        self._init_components(self.n_rows,self.n_cols) #beta, theta
+        return self._update(X_new)
 
     def transform(self, X, attr=None):
         '''Encode the data as a linear combination of the latent components.
-
         TODO
         '''
         return 1
@@ -163,46 +121,38 @@ class PoissonMF(BaseEstimator, TransformerMixin):
     def _update(self, X, update_beta=True):
         # alternating between update latent components and weights
         old_bd = -np.inf
-
-        for i in xrange(self.max_iter):
+        elbo_lst = []
+        for i in range(self.max_iter):
             self._update_phi(X)
-
             self._update_theta(X)
             if update_beta:
                 self._update_phi(X)
                 self._update_beta(X)
             bound = self._bound(X)
-            improvement = (bound - old_bd) / abs(old_bd)
-            if self.verbose:
-                sys.stdout.write('\r\tAfter ITERATION: %d\tObjective: %.2f\t'
-                                 'Old objective: %.2f\t'
-                                 'Improvement: %.5f' % (i, bound, old_bd,
-                                                        improvement))
-                sys.stdout.flush()
-            if improvement < self.tol:
-                break
+            elbo_lst.append(bound)
+            if(i > 0):
+              improvement = abs((bound - old_bd) / (old_bd))
+              if self.verbose:
+                  sys.stdout.write('\r\tAfter ITERATION: %d\tObjective: %.2f\t'
+                                   'Old objective: %.2f\t'
+                                   'Improvement: %.5f' % (i, bound, old_bd,
+                                                          improvement))
+                  sys.stdout.flush()
+              if improvement < self.tol:
+                  break
             old_bd = bound
         if self.verbose:
             sys.stdout.write('\n')
-        pass
+        return elbo_lst
 
     def _update_theta(self, X):
-        #print "t_gamma 0", self.gamma_t.shape
-        #print "t_rho 0", self.rho_t.shape
         self.gamma_t = self.a1 + npi.group_by(self.cols_index).sum(self.phi_var)[1]
         self.rho_t = self.a2  + np.sum(self.Eb, axis=0, keepdims=True)
-        #print "t_gamma 1", self.gamma_t.shape
-        #print "t_rho 1", self.rho_t.shape
         self.Et, self.Elogt = _compute_expectations(self.gamma_t, self.rho_t)
-        #self.c = 1. / np.mean(self.Et)
 
     def _update_beta(self, X):
-        #print "b_gamma 0", self.gamma_b.shape
-        #print "b_rho 0", self.rho_b.shape
         self.gamma_b = self.b1 + npi.group_by(self.row_index).sum(self.phi_var)[1]
         self.rho_b = self.b2 + np.sum(self.Et, axis=0, keepdims=True)
-        #print "b_gamma 1", self.gamma_b.shape
-        #print "b_rho 1", self.rho_b.shape
         self.Eb, self.Elogb = _compute_expectations(self.gamma_b, self.rho_b)
 
     def _bound(self, X):
@@ -215,6 +165,11 @@ class PoissonMF(BaseEstimator, TransformerMixin):
         bound += _gamma_term(self.b1, self.b2, self.gamma_b, self.rho_b,
                              self.Eb, self.Elogb)
         return bound
+    def sample(self):
+        latent_a = np.random.gamma(self.gamma_t,self.rho_t)
+        latent_b = np.random.gamma(self.gamma_b,self.rho_b)
+        return np.random.poisson(np.inner(latent_a,latent_b))
+      
 
 
 def _compute_expectations(alpha, beta):
