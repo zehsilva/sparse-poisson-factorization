@@ -165,9 +165,14 @@ class PoissonMF(BaseEstimator, TransformerMixin):
         bound += _gamma_term(self.b1, self.b2, self.gamma_b, self.rho_b,
                              self.Eb, self.Elogb)
         return bound
-    def sample(self):
-        latent_a = np.random.gamma(self.gamma_t,self.rho_t)
-        latent_b = np.random.gamma(self.gamma_b,self.rho_b)
+    def samplePosterior(self):
+        latent_a = np.random.gamma(self.gamma_t,1./self.rho_t)
+        latent_b = np.random.gamma(self.gamma_b,1./self.rho_b)
+        return np.random.poisson(np.inner(latent_a,latent_b))
+    
+    def samplePrior(self):
+        latent_a = np.random.gamma(self.a1,1./self.a2,(self.n_cols,self.n_components))
+        latent_b = np.random.gamma(self.b1,1./self.b2,(self.n_rows,self.n_components))
         return np.random.poisson(np.inner(latent_a,latent_b))
       
 
